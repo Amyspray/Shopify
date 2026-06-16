@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shopify Content Agent</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f4f6f8; color: #1a1a1a; }
+    header { background: #1a1a1a; color: white; padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+    header h1 { font-size: 18px; font-weight: 600; }
+    .badge { background: #00c48c; color: white; border-radius: 12px; padding: 2px 10px; font-size: 12px; }
+    .container { display: grid; grid-template-columns: 1fr 420px; height: calc(100vh - 56px); }
+    .chat-panel { display: flex; flex-direction: column; border-right: 1px solid #e1e3e5; }
+    .messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+    .msg { max-width: 80%; padding: 12px 16px; border-radius: 12px; line-height: 1.5; font-size: 14px; }
+    .msg.user { background: #1a1a1a; color: white; align-self: flex-end; border-radius: 12px 12px 4px 12px; }
+    .msg.agent { background: white; border: 1px solid #e1e3e5; align-self: flex-start; border-radius: 12px 12px 12px 4px; white-space: pre-wrap; }
+    .msg.agent.loading { color: #888; }
+    .chat-input { padding: 16px; border-top: 1px solid #e1e3e5; display: flex; gap: 8px; background: white; }
+    .chat-input textarea { flex: 1; border: 1px solid #c9cccf; border-radius: 8px; padding: 10px 14px; font-size: 14px; resize: none; height: 44px; font-family: inherit; }
+    .chat-input textarea:focus { outline: none; border-color: #1a1a1a; }
+    .chat-input button { background: #1a1a1a; color: white; border: none; border-radius: 8px; padding: 0 20px; cursor: pointer; font-size: 14px; font-weight: 500; }
+    .chat-input button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .approvals-panel { background: white; display: flex; flex-direction: column; }
+    .approvals-header { padding: 16px 20px; border-bottom: 1px solid #e1e3e5; font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+    .count-badge { background: #ff4d4d; color: white; border-radius: 10px; padding: 1px 8px; font-size: 12px; font-weight: 600; }
+    .changes-list { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+    .change-card { border: 1px solid #e1e3e5; border-radius: 10px; overflow: hidden; }
+    .change-card.approved { border-color: #00c48c; opacity: 0.7; }
+    .change-card.rejected { border-color: #e1e3e5; opacity: 0.5; }
+    .change-header { padding: 10px 14px; background: #f9fafb; border-bottom: 1px solid #e1e3e5; font-size: 13px; font-weight: 600; }
+    .change-type { display: inline-block; background: #e8f0fe; color: #1557b0; border-radius: 4px; padding: 1px 7px; font-size: 11px; margin-right: 6px; text-transform: uppercase; }
+    .change-reason { padding: 10px 14px; font-size: 13px; color: #444; }
+    .diff { padding: 10px 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border-top: 1px solid #e1e3e5; }
+    .diff-box { font-size: 11px; }
+    .diff-label { font-weight: 600; margin-bottom: 4px; color: #888; text-transform: uppercase; font-size: 10px; }
+    .diff-content { background: #f9fafb; border-radius: 4px; padding: 8px; max-height: 100px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; font-family: monospace; }
+    .diff-content.new { background: #f0fff4; }
+    .change-actions { padding: 10px 14px; display: flex; gap: 8px; border-top: 1px solid #e1e3e5; }
+    .btn-approve { flex: 1; background: #00c48c; color: white; border: none; border-radius: 6px; padding: 8px; cursor: pointer; font-size: 13px; font-weight: 600; }
+    .btn-reject { flex: 1; background: white; color: #ff4d4d; border: 1px solid #ff4d4d; border-radius: 6px; padding: 8px; cursor: pointer; font-size: 13px; font-weight: 600; }
+    .status-label { padding: 8px 14px; text-align: center; font-size: 13px; font-weight: 600; }
+    .status-label.approved { color: #00c48c; }
+    .status-label.rejected { color: #aaa; }
+    .empty { text-align: center; padding: 40px 20px; color: #888; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Shopify Content Agent</h1>
+    <span class="badge">nudispray.com</span>
+  </header>
+  <div class="container">
+    <div class="chat-panel">
+      <div class="messages" id="messages">
+        <div class="msg agent">Hi! I'm your Shopify content agent. I can help you update pages, blog posts, and product descriptions. Just tell me what you'd like to change and I'll draft it for your approval before anything goes live.</div>
+      </div>
+      <div class="chat-input">
+        <textarea id="input" placeholder="e.g. Rewrite the About page to sound more friendly..." rows="1"></textarea>
+        <button id="sendBtn" onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+    <div class="approvals-panel">
+      <div class="approvals-header">
+        Pending Approvals <span class="count-badge" id="countBadge" style="display:none">0</span>
+      </div>
+      <div class="changes-list" id="changesList">
+        <div class="empty">No pending changes yet.<br>Ask the agent to draft something!</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const input = document.getElementById('input');
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
+
+    async function sendMessage() {
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      addMessage('user', text);
+      const loading = addMessage('agent', 'Thinking...', true);
+      document.getElementById('sendBtn').disabled = true;
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text }),
+        });
+        const data = await res.json();
+        loading.remove();
+        addMessage('agent', data.error ? `Error: ${data.error}` : data.reply);
+        await loadChanges();
+      } catch (err) {
+        loading.remove();
+        addMessage('agent', 'Connection error. Please try again.');
+      }
+      document.getElementById('sendBtn').disabled = false;
+    }
+
+    function addMessage(role, text, loading = false) {
+      const div = document.createElement('div');
+      div.className = `msg ${role}${loading ? ' loading' : ''}`;
+      div.textContent = text;
+      const msgs = document.getElementById('messages');
+      msgs.appendChild(div);
+      msgs.scrollTop = msgs.scrollHeight;
+      return div;
+    }
+
+    async function loadChanges() {
+      const res = await fetch('/api/changes');
+      const changes = await res.json();
+      const pending = changes.filter(c => c.status === 'pending');
+      const badge = document.getElementById('countBadge');
+      badge.textContent = pending.length;
+      badge.style.display = pending.length ? 'inline-block' : 'none';
+      renderChanges(changes);
+    }
+
+    function renderChanges(changes) {
+      const list = document.getElementById('changesList');
+      if (!changes.length) {
+        list.innerHTML = '<div class="empty">No pending changes yet.<br>Ask the agent to draft something!</div>';
+        return;
+      }
+      list.innerHTML = '';
+      [...changes].reverse().forEach(c => {
+        const card = document.createElement('div');
+        card.className = `change-card ${c.status !== 'pending' ? c.status : ''}`;
+        const stripHtml = h => h ? h.replace(/<[^>]+>/g, '').slice(0, 200) : '(no content)';
+        card.innerHTML = `
+          <div class="change-header">
+            <span class="change-type">${c.type}</span>
+            ${c.proposed.title || c.current.title}
+          </div>
+          <div class="change-reason">${c.reason}</div>
+          <div class="diff">
+            <div class="diff-box">
+              <div class="diff-label">Current</div>
+              <div class="diff-content">${stripHtml(c.current.body_html)}</div>
+            </div>
+            <div class="diff-box">
+              <div class="diff-label">Proposed</div>
+              <div class="diff-content new">${stripHtml(c.proposed.body_html)}</div>
+            </div>
+          </div>
+          ${c.status === 'pending' ? `
+          <div class="change-actions">
+            <button class="btn-approve" onclick="approve('${c.id}')">Approve & Publish</button>
+            <button class="btn-reject" onclick="reject('${c.id}')">Reject</button>
+          </div>` : `<div class="status-label ${c.status}">${c.status === 'approved' ? '✓ Approved & Published' : '✗ Rejected'}</div>`}
+        `;
+        list.appendChild(card);
+      });
+    }
+
+    async function approve(id) {
+      await fetch(`/api/changes/${id}/approve`, { method: 'POST' });
+      await loadChanges();
+    }
+
+    async function reject(id) {
+      await fetch(`/api/changes/${id}/reject`, { method: 'POST' });
+      await loadChanges();
+    }
+
+    loadChanges();
+  </script>
+</body>
+</html>

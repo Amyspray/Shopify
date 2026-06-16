@@ -1,0 +1,17 @@
+{
+  "name": "claude-shopify-agent",
+  "version": "1.0.0",
+  "description": "AI agent for managing Shopify content with human approval",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.30.0",
+    "express": "^4.19.0",
+    "dotenv": "^16.4.0",
+    "node-fetch": "^3.3.2"
+  }
+}
