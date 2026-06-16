@@ -1,18 +1,15 @@
 import fetch from 'node-fetch';
 
-let _token = process.env.SHOPIFY_ACCESS_TOKEN;
-export function setToken(token) { _token = token; }
-
 const BASE = `https://${process.env.SHOPIFY_STORE_DOMAIN}/admin/api/2026-04`;
 
 async function shopifyRequest(method, path, body) {
-  const HEADERS = {
-    'X-Shopify-Access-Token': _token,
+  const headers = {
+    'X-Shopify-Access-Token': process.env.SHOPIFY_ACCESS_TOKEN,
     'Content-Type': 'application/json',
   };
   const res = await fetch(`${BASE}${path}`, {
     method,
-    headers: HEADERS,
+    headers,
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {
