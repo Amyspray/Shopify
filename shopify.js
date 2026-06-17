@@ -38,7 +38,7 @@ export async function getBlogPosts(token) {
   const blogs = blogsData.blogs;
   const allArticles = [];
   for (const blog of blogs) {
-    const artData = await shopifyRequest('GET', `/blogs/${blog.id}/articles.json?limit=20`, token);
+    const artData = await shopifyRequest('GET', `/blogs/${blog.id}/articles.json?limit=10`, token);
     allArticles.push(...artData.articles.map(a => ({ ...a, blog_title: blog.title })));
   }
   return allArticles;

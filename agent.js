@@ -111,10 +111,11 @@ async function executeTool(name, input, pendingChanges, token) {
     }
     case 'list_blog_posts': {
       const posts = await shopify.getBlogPosts(token);
-      return posts.map(p => ({ blog_id: p.blog_id, article_id: p.id, title: p.title, blog: p.blog_title }));
+      return posts.map(p => ({ blog_id: p.blog_id, article_id: p.id, title: p.title, blog: p.blog_title, published_at: p.published_at }));
     }
     case 'get_blog_post': {
-      return shopify.getArticle(input.blog_id, input.article_id, token);
+      const article = await shopify.getArticle(input.blog_id, input.article_id, token);
+      return { ...article, body_html: article.body_html?.slice(0, 3000) };
     }
     case 'propose_blog_post_update': {
       const current = await shopify.getArticle(input.blog_id, input.article_id, token);
