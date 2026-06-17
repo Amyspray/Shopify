@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import crypto from 'crypto';
 import fetch from 'node-fetch';
+import fs from 'fs';
 import { runAgent } from './agent.js';
 
 const app = express();
@@ -10,7 +11,16 @@ app.use(express.static('public'));
 
 const pendingChanges = [];
 const conversationHistory = [];
-let accessToken = null;
+const TOKEN_FILE = '/tmp/shopify_token.txt';
+
+function loadToken() {
+  try { return fs.readFileSync(TOKEN_FILE, 'utf8').trim(); } catch { return null; }
+}
+function saveToken(token) {
+  fs.writeFileSync(TOKEN_FILE, token);
+}
+
+let accessToken = loadToken() || process.env.SHOPIFY_ACCESS_TOKEN || null;
 
 const SHOPIFY_API_KEY = process.env.SHOPIFY_API_KEY;
 const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET;
@@ -39,6 +49,7 @@ app.get('/auth/callback', async (req, res) => {
     const data = await tokenRes.json();
     if (data.access_token) {
       accessToken = data.access_token;
+      saveToken(accessToken);
       res.redirect('/');
     } else {
       res.status(400).send(`Auth failed: ${JSON.stringify(data)}`);

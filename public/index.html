@@ -169,6 +169,17 @@
       await loadChanges();
     }
 
+    async function checkAuth() {
+      const res = await fetch('/api/auth-status');
+      const { authenticated } = await res.json();
+      if (!authenticated) {
+        const div = document.createElement('div');
+        div.className = 'msg agent';
+        div.innerHTML = '⚠️ Not connected to Shopify. <a href="/auth" style="color:#1a1a1a;font-weight:600;">Click here to connect</a>.';
+        document.getElementById('messages').appendChild(div);
+      }
+    }
+    checkAuth();
     loadChanges();
   </script>
 </body>
