@@ -85,17 +85,17 @@ const tools = [
   },
 ];
 
-async function executeTool(name, input, pendingChanges) {
+async function executeTool(name, input, pendingChanges, token) {
   switch (name) {
     case 'list_pages': {
-      const pages = await shopify.getPages();
+      const pages = await shopify.getPages(token);
       return pages.map(p => ({ id: p.id, title: p.title, handle: p.handle }));
     }
     case 'get_page': {
-      return shopify.getPage(input.id);
+      return shopify.getPage(input.id, token);
     }
     case 'propose_page_update': {
-      const current = await shopify.getPage(input.id);
+      const current = await shopify.getPage(input.id, token);
       const change = {
         id: `page_${input.id}_${Date.now()}`,
         type: 'page',
@@ -110,14 +110,14 @@ async function executeTool(name, input, pendingChanges) {
       return { changeId: change.id, message: 'Change queued for your approval.' };
     }
     case 'list_blog_posts': {
-      const posts = await shopify.getBlogPosts();
+      const posts = await shopify.getBlogPosts(token);
       return posts.map(p => ({ blog_id: p.blog_id, article_id: p.id, title: p.title, blog: p.blog_title }));
     }
     case 'get_blog_post': {
-      return shopify.getArticle(input.blog_id, input.article_id);
+      return shopify.getArticle(input.blog_id, input.article_id, token);
     }
     case 'propose_blog_post_update': {
-      const current = await shopify.getArticle(input.blog_id, input.article_id);
+      const current = await shopify.getArticle(input.blog_id, input.article_id, token);
       const change = {
         id: `article_${input.article_id}_${Date.now()}`,
         type: 'article',
@@ -133,11 +133,11 @@ async function executeTool(name, input, pendingChanges) {
       return { changeId: change.id, message: 'Change queued for your approval.' };
     }
     case 'list_products': {
-      const products = await shopify.getProducts();
+      const products = await shopify.getProducts(20, token);
       return products.map(p => ({ id: p.id, title: p.title, status: p.status }));
     }
     case 'propose_product_update': {
-      const products = await shopify.getProducts(250);
+      const products = await shopify.getProducts(250, token);
       const current = products.find(p => p.id === input.id);
       if (!current) throw new Error(`Product ${input.id} not found`);
       const change = {
@@ -158,7 +158,7 @@ async function executeTool(name, input, pendingChanges) {
   }
 }
 
-export async function runAgent(userMessage, conversationHistory, pendingChanges) {
+export async function runAgent(userMessage, conversationHistory, pendingChanges, token) {
   const messages = [
     ...conversationHistory,
     { role: 'user', content: userMessage },
@@ -186,7 +186,7 @@ Be concise and helpful. When proposing changes, explain clearly what you changed
     for (const toolUse of toolUses) {
       let result;
       try {
-        result = await executeTool(toolUse.name, toolUse.input, pendingChanges);
+        result = await executeTool(toolUse.name, toolUse.input, pendingChanges, token);
       } catch (err) {
         result = { error: err.message };
       }
