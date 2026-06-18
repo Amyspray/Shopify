@@ -89,6 +89,7 @@ app.post('/api/changes/:id/approve', async (req, res) => {
     const shopify = await import('./shopify.js');
     if (change.type === 'page') await shopify.updatePage(change.resourceId, change.proposed, accessToken);
     else if (change.type === 'article') await shopify.updateArticle(change.blogId, change.resourceId, change.proposed, accessToken);
+    else if (change.type === 'new_article') await shopify.createArticle(change.blogId, change.proposed, accessToken);
     else if (change.type === 'product') await shopify.updateProduct(change.resourceId, change.proposed, accessToken);
     change.status = 'approved';
     change.processedAt = new Date().toISOString();

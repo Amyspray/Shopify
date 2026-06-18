@@ -65,6 +65,26 @@ const tools = [
     },
   },
   {
+    name: 'list_blogs',
+    description: 'List all blogs in the store to get blog IDs for creating posts',
+    input_schema: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'propose_new_blog_post',
+    description: 'Propose a brand new blog post (requires user approval before publishing)',
+    input_schema: {
+      type: 'object',
+      properties: {
+        blog_id: { type: 'number', description: 'Blog ID to post to' },
+        title: { type: 'string', description: 'Post title' },
+        body_html: { type: 'string', description: 'Full HTML content of the post' },
+        tags: { type: 'string', description: 'Comma-separated tags (optional)' },
+        reason: { type: 'string', description: 'What this post is about and why' },
+      },
+      required: ['blog_id', 'title', 'body_html', 'reason'],
+    },
+  },
+  {
     name: 'list_products',
     description: 'List products in the store',
     input_schema: { type: 'object', properties: {}, required: [] },
@@ -132,6 +152,24 @@ async function executeTool(name, input, pendingChanges, token) {
       };
       pendingChanges.push(change);
       return { changeId: change.id, message: 'Change queued for your approval.' };
+    }
+    case 'list_blogs': {
+      const blogs = await shopify.getBlogs(token);
+      return blogs.map(b => ({ id: b.id, title: b.title, handle: b.handle }));
+    }
+    case 'propose_new_blog_post': {
+      const change = {
+        id: `new_article_${Date.now()}`,
+        type: 'new_article',
+        blogId: input.blog_id,
+        current: { title: '(new post)', body_html: '' },
+        proposed: { title: input.title, body_html: input.body_html, tags: input.tags || '' },
+        reason: input.reason,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      };
+      pendingChanges.push(change);
+      return { changeId: change.id, message: 'New blog post queued for your approval.' };
     }
     case 'list_products': {
       const products = await shopify.getProducts(20, token);

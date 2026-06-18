@@ -54,7 +54,17 @@ export async function updateArticle(blogId, articleId, fields, token) {
   return data.article;
 }
 
-export async function getProducts(limit = 20, token) {
+export async function createArticle(blogId, fields, token) {
+  const data = await shopifyRequest('POST', `/blogs/${blogId}/articles.json`, token, { article: fields });
+  return data.article;
+}
+
+export async function getBlogs(token) {
+  const data = await shopifyRequest('GET', '/blogs.json', token);
+  return data.blogs;
+}
+
+
   const data = await shopifyRequest('GET', `/products.json?limit=${limit}`, token);
   return data.products;
 }
