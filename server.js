@@ -50,6 +50,7 @@ app.get('/auth/callback', async (req, res) => {
     if (data.access_token) {
       accessToken = data.access_token;
       saveToken(accessToken);
+      console.log('SHOPIFY_ACCESS_TOKEN=' + accessToken);
       res.redirect('/');
     } else {
       res.status(400).send(`Auth failed: ${JSON.stringify(data)}`);
