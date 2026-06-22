@@ -65,6 +65,7 @@ export async function getBlogs(token) {
 }
 
 
+export async function getProducts(limit = 20, token) {
   const data = await shopifyRequest('GET', `/products.json?limit=${limit}`, token);
   return data.products;
 }
